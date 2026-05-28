@@ -3,46 +3,35 @@ import requests
 from datetime import datetime, timedelta
 import isodate
 
-# ==============================
-# YOUTUBE API KEY
-# ==============================
+# ==========================================
+# YOUTUBE API CONFIG
+# ==========================================
 
 API_KEY = "AIzaSyBmowEzxvxsZtBFFc-R14uym8CAS5BwFRY"
-
-# ==============================
-# YOUTUBE API URLS
-# ==============================
 
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 YOUTUBE_VIDEO_URL = "https://www.googleapis.com/youtube/v3/videos"
 YOUTUBE_CHANNEL_URL = "https://www.googleapis.com/youtube/v3/channels"
+YOUTUBE_PLAYLIST_URL = "https://www.googleapis.com/youtube/v3/playlistItems"
 
-# ==============================
-# PAGE SETTINGS
-# ==============================
+# ==========================================
+# STREAMLIT UI
+# ==========================================
 
-st.set_page_config(
-    page_title="Viral Shorts Finder",
-    layout="wide"
-)
+st.set_page_config(page_title="Viral Shorts Finder", layout="wide")
 
-st.title("🔥 Viral Shorts Finder")
+st.title("🔥 Viral Shorts Channel Finder")
 
 st.write(
-    "Find newly created low subscriber channels "
-    "getting massive Shorts views."
+    "Find newly created YouTube channels with low subscribers "
+    "that are getting massive Shorts views."
 )
 
-# ==============================
+# ==========================================
 # USER INPUTS
-# ==============================
+# ==========================================
 
-days = st.slider(
-    "Search Videos Uploaded Within Days",
-    1,
-    30,
-    7
-)
+days = st.slider("Search Videos Uploaded Within Days", 1, 30, 7)
 
 max_subscribers = st.number_input(
     "Maximum Subscribers",
@@ -51,10 +40,17 @@ max_subscribers = st.number_input(
     value=3000
 )
 
+channel_age_days = st.slider(
+    "Maximum Channel Age (Days)",
+    30,
+    180,
+    60
+)
+
 minimum_views = st.number_input(
     "Minimum Views",
     min_value=1000,
-    max_value=100000000,
+    max_value=10000000,
     value=50000
 )
 
@@ -65,27 +61,74 @@ max_results = st.slider(
     5
 )
 
-# ==============================
+# ==========================================
 # KEYWORDS
-# ==============================
+# ==========================================
 
 keywords = [
-
     "reddit stories shorts",
     "relationship stories shorts",
+    "cheating stories shorts",
     "aita shorts",
     "reddit cheating shorts",
     "open marriage shorts",
     "surviving infidelity shorts",
-    "cheating stories shorts",
-    "true story shorts",
-    "reddit update shorts"
-
+    "true relationship stories shorts",
 ]
 
-# ==============================
-# FETCH BUTTON
-# ==============================
+# ==========================================
+# HELPER FUNCTIONS
+# ==========================================
+
+def get_video_details(video_ids):
+
+    params = {
+        "part": "statistics,contentDetails,snippet",
+        "id": ",".join(video_ids),
+        "key": API_KEY
+    }
+
+    response = requests.get(YOUTUBE_VIDEO_URL, params=params)
+
+    return response.json()
+
+
+def get_channel_details(channel_ids):
+
+    params = {
+        "part": "statistics,contentDetails,snippet",
+        "id": ",".join(channel_ids),
+        "key": API_KEY
+    }
+
+    response = requests.get(YOUTUBE_CHANNEL_URL, params=params)
+
+    return response.json()
+
+
+def get_oldest_video_date(upload_playlist_id):
+
+    params = {
+        "part": "snippet",
+        "playlistId": upload_playlist_id,
+        "maxResults": 1,
+        "pageToken": "",
+        "key": API_KEY
+    }
+
+    response = requests.get(YOUTUBE_PLAYLIST_URL, params=params)
+
+    data = response.json()
+
+    if "items" not in data or not data["items"]:
+        return None
+
+    return data["items"][0]["snippet"]["publishedAt"]
+
+
+# ==========================================
+# MAIN BUTTON
+# ==========================================
 
 if st.button("🚀 Find Viral Shorts"):
 
@@ -100,264 +143,229 @@ if st.button("🚀 Find Viral Shorts"):
 
         st.write(f"Searching: {keyword}")
 
-        try:
+        # ==================================
+        # SEARCH VIDEOS
+        # ==================================
 
-            # ==============================
-            # SEARCH VIDEOS
-            # ==============================
+        search_params = {
+            "part": "snippet",
+            "q": keyword,
+            "type": "video",
+            "order": "viewCount",
+            "publishedAfter": published_after,
+            "maxResults": max_results,
+            "key": API_KEY
+        }
 
-            search_params = {
+        response = requests.get(
+            YOUTUBE_SEARCH_URL,
+            params=search_params
+        )
 
-                "part": "snippet",
-                "q": keyword,
-                "type": "video",
-                "order": "viewCount",
-                "publishedAfter": published_after,
-                "maxResults": max_results,
-                "key": API_KEY
+        data = response.json()
 
-            }
+        if "items" not in data:
+            continue
 
-            response = requests.get(
-                YOUTUBE_SEARCH_URL,
-                params=search_params
-            )
+        videos = data["items"]
 
-            data = response.json()
+        video_ids = []
+        channel_ids = []
 
-            if "items" not in data:
-                continue
+        for video in videos:
 
-            videos = data["items"]
+            try:
+                video_id = video["id"]["videoId"]
+                channel_id = video["snippet"]["channelId"]
 
-            video_ids = []
-            channel_ids = []
+                if video_id not in seen_videos:
 
-            for video in videos:
+                    seen_videos.add(video_id)
 
-                try:
+                    video_ids.append(video_id)
+                    channel_ids.append(channel_id)
 
-                    video_id = video["id"]["videoId"]
-                    channel_id = video["snippet"]["channelId"]
+            except:
+                pass
 
-                    if video_id not in seen_videos:
+        if not video_ids:
+            continue
 
-                        seen_videos.add(video_id)
+        # ==================================
+        # VIDEO DETAILS
+        # ==================================
 
-                        video_ids.append(video_id)
-                        channel_ids.append(channel_id)
+        video_data = get_video_details(video_ids)
 
-                except:
-                    pass
+        if "items" not in video_data:
+            continue
 
-            if not video_ids:
-                continue
+        # ==================================
+        # CHANNEL DETAILS
+        # ==================================
 
-            # ==============================
-            # VIDEO DETAILS
-            # ==============================
+        channel_data = get_channel_details(channel_ids)
 
-            video_params = {
+        if "items" not in channel_data:
+            continue
 
-                "part": "statistics,contentDetails",
-                "id": ",".join(video_ids),
-                "key": API_KEY
+        # ==================================
+        # CREATE LOOKUP DICTIONARIES
+        # ==================================
 
-            }
+        video_lookup = {}
 
-            video_response = requests.get(
-                YOUTUBE_VIDEO_URL,
-                params=video_params
-            )
+        for item in video_data["items"]:
+            video_lookup[item["id"]] = item
 
-            video_data = video_response.json()
+        channel_lookup = {}
 
-            if "items" not in video_data:
-                continue
+        for channel in channel_data["items"]:
+            channel_lookup[channel["id"]] = channel
 
-            # ==============================
-            # CHANNEL DETAILS
-            # ==============================
+        # ==================================
+        # PROCESS RESULTS
+        # ==================================
 
-            channel_params = {
+        for video in videos:
 
-                "part": "statistics,snippet",
-                "id": ",".join(channel_ids),
-                "key": API_KEY
+            try:
 
-            }
+                video_id = video["id"]["videoId"]
+                channel_id = video["snippet"]["channelId"]
 
-            channel_response = requests.get(
-                YOUTUBE_CHANNEL_URL,
-                params=channel_params
-            )
+                if video_id not in video_lookup:
+                    continue
 
-            channel_data = channel_response.json()
+                if channel_id not in channel_lookup:
+                    continue
 
-            if "items" not in channel_data:
-                continue
+                video_info = video_lookup[video_id]
+                channel_info = channel_lookup[channel_id]
 
-            # ==============================
-            # LOOKUP DICTIONARIES
-            # ==============================
+                # ==================================
+                # VIDEO VIEWS
+                # ==================================
 
-            video_lookup = {}
+                views = int(
+                    video_info["statistics"].get("viewCount", 0)
+                )
 
-            for item in video_data["items"]:
+                if views < minimum_views:
+                    continue
 
-                video_lookup[item["id"]] = item
+                # ==================================
+                # SHORTS FILTER
+                # ==================================
 
-            channel_lookup = {}
+                duration = video_info["contentDetails"]["duration"]
 
-            for item in channel_data["items"]:
+                duration_seconds = int(
+                    isodate.parse_duration(duration).total_seconds()
+                )
 
-                channel_lookup[item["id"]] = item
+                if duration_seconds > 60:
+                    continue
 
-            # ==============================
-            # PROCESS VIDEOS
-            # ==============================
+                # ==================================
+                # SUBSCRIBERS FILTER
+                # ==================================
 
-            for video in videos:
+                subscribers = int(
+                    channel_info["statistics"].get(
+                        "subscriberCount", 0
+                    )
+                )
 
-                try:
+                if subscribers > max_subscribers:
+                    continue
 
-                    video_id = video["id"]["videoId"]
-                    channel_id = video["snippet"]["channelId"]
+                # ==================================
+                # CHANNEL AGE CHECK
+                # ==================================
 
-                    if video_id not in video_lookup:
-                        continue
+                uploads_playlist = (
+                    channel_info["contentDetails"]
+                    ["relatedPlaylists"]["uploads"]
+                )
 
-                    if channel_id not in channel_lookup:
-                        continue
+                oldest_video_date = get_oldest_video_date(
+                    uploads_playlist
+                )
 
-                    video_info = video_lookup[video_id]
-                    channel_info = channel_lookup[channel_id]
+                if not oldest_video_date:
+                    continue
 
-                    # ==============================
-                    # VIEWS
-                    # ==============================
+                oldest_date = datetime.strptime(
+                    oldest_video_date,
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
 
-                    views = int(
-                        video_info["statistics"].get(
-                            "viewCount",
-                            0
-                        )
+                age_days = (
+                    datetime.utcnow() - oldest_date
+                ).days
+
+                if age_days > channel_age_days:
+                    continue
+
+                # ==================================
+                # VIRAL SCORE
+                # ==================================
+
+                if subscribers == 0:
+                    viral_score = views
+                else:
+                    viral_score = round(
+                        views / subscribers,
+                        2
                     )
 
-                    if views < minimum_views:
-                        continue
+                # ==================================
+                # VIDEO URL
+                # ==================================
 
-                    # ==============================
-                    # SHORTS FILTER
-                    # ==============================
+                video_url = (
+                    f"https://www.youtube.com/watch?v={video_id}"
+                )
 
-                    duration = video_info[
-                        "contentDetails"
-                    ]["duration"]
+                # ==================================
+                # STORE RESULTS
+                # ==================================
 
-                    duration_seconds = int(
-                        isodate.parse_duration(
-                            duration
-                        ).total_seconds()
-                    )
+                all_results.append({
 
-                    if duration_seconds > 60:
-                        continue
+                    "title":
+                        video["snippet"]["title"],
 
-                    # ==============================
-                    # SUBSCRIBERS
-                    # ==============================
+                    "channel":
+                        video["snippet"]["channelTitle"],
 
-                    subscribers = int(
-                        channel_info["statistics"].get(
-                            "subscriberCount",
-                            0
-                        )
-                    )
+                    "views":
+                        views,
 
-                    if subscribers > max_subscribers:
-                        continue
+                    "subscribers":
+                        subscribers,
 
-                    # ==============================
-                    # CHANNEL AGE
-                    # ==============================
+                    "viral_score":
+                        viral_score,
 
-                    channel_created = channel_info[
-                        "snippet"
-                    ]["publishedAt"]
+                    "age_days":
+                        age_days,
 
-                    channel_created_date = datetime.strptime(
-                        channel_created,
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    )
+                    "url":
+                        video_url,
 
-                    age_days = (
-                        datetime.utcnow() -
-                        channel_created_date
-                    ).days
+                    "keyword":
+                        keyword
 
-                    # ==============================
-                    # VIRAL SCORE
-                    # ==============================
+                })
 
-                    if subscribers == 0:
-                        viral_score = views
-                    else:
-                        viral_score = round(
-                            views / subscribers,
-                            2
-                        )
+            except Exception as e:
+                st.warning(f"Error: {e}")
 
-                    # ==============================
-                    # VIDEO URL
-                    # ==============================
-
-                    video_url = (
-                        f"https://www.youtube.com/watch?v={video_id}"
-                    )
-
-                    # ==============================
-                    # SAVE RESULT
-                    # ==============================
-
-                    all_results.append({
-
-                        "title":
-                            video["snippet"]["title"],
-
-                        "channel":
-                            video["snippet"]["channelTitle"],
-
-                        "views":
-                            views,
-
-                        "subscribers":
-                            subscribers,
-
-                        "viral_score":
-                            viral_score,
-
-                        "age_days":
-                            age_days,
-
-                        "url":
-                            video_url,
-
-                        "keyword":
-                            keyword
-
-                    })
-
-                except:
-                    pass
-
-        except Exception as e:
-
-            st.error(f"Error: {e}")
-
-    # ==============================
+    # ==========================================
     # SORT RESULTS
-    # ==============================
+    # ==========================================
 
     all_results = sorted(
         all_results,
@@ -365,9 +373,9 @@ if st.button("🚀 Find Viral Shorts"):
         reverse=True
     )
 
-    # ==============================
+    # ==========================================
     # DISPLAY RESULTS
-    # ==============================
+    # ==========================================
 
     if all_results:
 
@@ -381,33 +389,27 @@ if st.button("🚀 Find Viral Shorts"):
 
             st.markdown(
                 f"""
-## 🎬 {result['title']}
+### 🎬 {result['title']}
 
-### 📺 Channel:
-{result['channel']}
+**📺 Channel:** {result['channel']}
 
-### 👀 Views:
-{result['views']:,}
+**👀 Views:** {result['views']:,}
 
-### 👥 Subscribers:
-{result['subscribers']:,}
+**👥 Subscribers:** {result['subscribers']:,}
 
-### 🔥 Viral Score:
-{result['viral_score']}
+**🔥 Viral Score:** {result['viral_score']}
 
-### 📅 Channel Age:
-{result['age_days']} Days
+**📅 Channel Age:** {result['age_days']} Days
 
-### 🔍 Keyword:
-{result['keyword']}
+**🔍 Keyword:** {result['keyword']}
 
-### ▶️ Watch Video:
-{result['url']}
+**▶️ Video Link:** [Watch Video]({result['url']})
 """
             )
 
     else:
 
         st.warning(
-            "No viral Shorts found."
+            "No viral Shorts found matching your filters."
         )
+```
