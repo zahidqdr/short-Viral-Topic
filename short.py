@@ -412,4 +412,3 @@ if st.button("🚀 Find Viral Shorts"):
         st.warning(
             "No viral Shorts found matching your filters."
         )
-```
