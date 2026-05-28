@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
-import isodate
 
 # ==========================================
 # YOUTUBE API CONFIG
