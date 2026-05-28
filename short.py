@@ -24,9 +24,16 @@ days = st.number_input("Enter Days (1-30):", 1, 30, 5)
 only_shorts = st.checkbox("🎬 Show ONLY Shorts (≤ 60 sec)", value=True)
 
 keywords = [
-    "Affair Relationship Stories", "Reddit Update", "Reddit Relationship Advice",
-    "Reddit Cheating", "AITA Update", "Open Marriage", "X GF Reddit",
-    "Cheating Story Real", "True Cheating Story", "Reddit Marriage"
+    "Korean Drama", "Kdrama Romance", "Best Korean Drama",
+"Korean Love Story", "Romantic Kdrama", "Kdrama Edit",
+"Korean Drama Hindi Urdu", "Kdrama Emotional Scenes", "Korean Series",
+"Netflix Korean Drama", "Sad Korean Drama", "Kdrama Funny Moments",
+"Korean Drama Clips", "Kdrama OST", "Top Korean Dramas",
+"Korean Action Drama", "Korean Thriller Drama", "Kdrama Lovers",
+"Korean School Drama", "Kdrama Status", "Latest Kdrama",
+"Korean Drama Explained", "Kdrama Shorts", "Asian Drama",
+"Korean Actors", "Korean Actress", "Kdrama Viral",
+"Romantic Korean Series", "Korean Drama Review", "Kdrama Recap"
 ]
 
 # =========================
