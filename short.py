@@ -380,7 +380,7 @@ if st.button("🚀 Find Viral Shorts"):
             st.markdown("---")
 
             st.markdown(
-                f
+                f"""
 ## 🎬 {result['title']}
 
 ### 📺 Channel:
