@@ -7,7 +7,7 @@ import isodate
 # YOUTUBE API KEY
 # ==============================
 
-API_KEY = "AIzaSyBmowEzxvxsZtBFFc-R14uym8CAS5BwFRY"
+API_KEY = "PASTE_YOUR_API_KEY_HERE"
 
 # ==============================
 # YOUTUBE API URLS
@@ -403,6 +403,7 @@ if st.button("🚀 Find Viral Shorts"):
 
 ### ▶️ Watch Video:
 {result['url']}
+"""
             )
 
     else:
