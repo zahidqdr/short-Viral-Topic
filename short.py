@@ -1,12 +1,13 @@
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
+import isodate
 
 # =========================
 # YOUTUBE API KEY
 # =========================
 
-API_KEY = "AIzaSyBmowEzxvxsZtBFFc-R14uym8CAS5BwFRY"
+API_KEY = "ENTER_YOUR_API_KEY"
 
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 YOUTUBE_VIDEO_URL = "https://www.googleapis.com/youtube/v3/videos"
@@ -18,28 +19,19 @@ YOUTUBE_CHANNEL_URL = "https://www.googleapis.com/youtube/v3/channels"
 
 st.title("🔥 YouTube Viral Topics Tool")
 
-days = st.number_input(
-    "Enter Days to Search (1-30):",
-    min_value=1,
-    max_value=30,
-    value=5
-)
+days = st.number_input("Enter Days (1-30):", 1, 30, 5)
 
-# =========================
-# KEYWORDS
-# =========================
+# ✅ SHORTS OPTION ADDED
+only_shorts = st.checkbox("🎬 Show ONLY Shorts (≤ 60 sec)", value=True)
 
 keywords = [
-    "Affair Relationship Stories", "Reddit Update", "Reddit Relationship Advice", "Reddit Relationship",
-    "Reddit Cheating", "AITA Update", "Open Marriage", "Open Relationship", "X BF Caught",
-    "Stories Cheat", "X GF Reddit", "AskReddit Surviving Infidelity", "GurlCan Reddit",
-    "Cheating Story Actually Happened", "Cheating Story Real", "True Cheating Story",
-    "Reddit Cheating Story", "R/Surviving Infidelity", "Surviving Infidelity",
-    "Reddit Marriage", "Wife Cheated I Can't Forgive", "Reddit AP", "Exposed Wife", "Cheat Exposed"
+    "Affair Relationship Stories", "Reddit Update", "Reddit Relationship Advice",
+    "Reddit Cheating", "AITA Update", "Open Marriage", "X GF Reddit",
+    "Cheating Story Real", "True Cheating Story", "Reddit Marriage"
 ]
 
 # =========================
-# BUTTON
+# FETCH DATA
 # =========================
 
 if st.button("🚀 Fetch Data"):
@@ -87,48 +79,39 @@ if st.button("🚀 Fetch Data"):
                         seen_videos.add(vid)
                         video_ids.append(vid)
                         channel_ids.append(cid)
-
                 except:
                     continue
 
             if not video_ids:
                 continue
 
-            # =========================
             # VIDEO STATS
-            # =========================
+            video_data = requests.get(
+                YOUTUBE_VIDEO_URL,
+                params={
+                    "part": "statistics,contentDetails",
+                    "id": ",".join(video_ids),
+                    "key": API_KEY
+                }
+            ).json()
 
-            stats_params = {
-                "part": "statistics",
-                "id": ",".join(video_ids),
-                "key": API_KEY
-            }
-
-            stats_data = requests.get(YOUTUBE_VIDEO_URL, params=stats_params).json()
-
-            # =========================
             # CHANNEL STATS
-            # =========================
+            channel_data = requests.get(
+                YOUTUBE_CHANNEL_URL,
+                params={
+                    "part": "statistics",
+                    "id": ",".join(channel_ids),
+                    "key": API_KEY
+                }
+            ).json()
 
-            channel_params = {
-                "part": "statistics",
-                "id": ",".join(channel_ids),
-                "key": API_KEY
-            }
-
-            channel_data = requests.get(YOUTUBE_CHANNEL_URL, params=channel_params).json()
-
-            if "items" not in stats_data or "items" not in channel_data:
+            if "items" not in video_data or "items" not in channel_data:
                 continue
 
-            # LOOKUP MAP
-            video_map = {v["id"]: v for v in stats_data["items"]}
+            video_map = {v["id"]: v for v in video_data["items"]}
             channel_map = {c["id"]: c for c in channel_data["items"]}
 
-            # =========================
             # PROCESS
-            # =========================
-
             for video in videos:
 
                 try:
@@ -144,39 +127,45 @@ if st.button("🚀 Fetch Data"):
                     views = int(vdata["statistics"].get("viewCount", 0))
                     subs = int(cdata["statistics"].get("subscriberCount", 0))
 
-                    if subs >= 3000:
+                    # =========================
+                    # 🎬 SHORTS FILTER (NEW)
+                    # =========================
+
+                    duration = vdata["contentDetails"]["duration"]
+                    seconds = int(isodate.parse_duration(duration).total_seconds())
+
+                    if only_shorts and seconds > 60:
                         continue
 
                     all_results.append({
-                        "Title": video["snippet"].get("title", ""),
-                        "Description": video["snippet"].get("description", "")[:200],
+                        "Title": video["snippet"]["title"],
                         "URL": f"https://www.youtube.com/watch?v={vid}",
                         "Views": views,
-                        "Subscribers": subs
+                        "Subscribers": subs,
+                        "Duration": seconds
                     })
 
                 except:
                     continue
 
-        # =========================
-        # OUTPUT
-        # =========================
+        # SORT
+        all_results = sorted(all_results, key=lambda x: x["Views"], reverse=True)
 
+        # OUTPUT
         if all_results:
 
-            st.success(f"Found {len(all_results)} results!")
+            st.success(f"Found {len(all_results)} videos!")
 
             for r in all_results:
-                st.markdown(
-                    f"""
-**Title:** {r['Title']}  
-**Description:** {r['Description']}  
-**URL:** [Watch Video]({r['URL']})  
-**Views:** {r['Views']}  
-**Subscribers:** {r['Subscribers']}  
----
-"""
-                )
+
+                st.markdown("---")
+                st.markdown(f"""
+**🎬 Title:** {r['Title']}  
+**👀 Views:** {r['Views']}  
+**👥 Subscribers:** {r['Subscribers']}  
+**⏱️ Duration:** {r['Duration']} sec  
+👉 [Watch Video]({r['URL']})
+""")
 
         else:
             st.warning("No results found.")
