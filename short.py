@@ -1,12 +1,13 @@
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
+import isodate
 
 # ==========================================
 # YOUTUBE API CONFIG
 # ==========================================
 
-API_KEY = "AIzaSyBmowEzxvxsZtBFFc-R14uym8CAS5BwFRY"
+API_KEY = "ENTER_YOUR_API_KEY"
 
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 YOUTUBE_VIDEO_URL = "https://www.googleapis.com/youtube/v3/videos"
@@ -65,16 +66,14 @@ max_results = st.slider(
 # ==========================================
 
 keywords = [
-    "Korean Drama", "Kdrama Romance", "Best Korean Drama",
-"Korean Love Story", "Romantic Kdrama", "Kdrama Edit",
-"Korean Drama Hindi Urdu", "Kdrama Emotional Scenes", "Korean Series",
-"Netflix Korean Drama", "Sad Korean Drama", "Kdrama Funny Moments",
-"Korean Drama Clips", "Kdrama OST", "Top Korean Dramas",
-"Korean Action Drama", "Korean Thriller Drama", "Kdrama Lovers",
-"Korean School Drama", "Kdrama Status", "Latest Kdrama",
-"Korean Drama Explained", "Kdrama Shorts", "Asian Drama",
-"Korean Actors", "Korean Actress", "Kdrama Viral",
-"Romantic Korean Series", "Korean Drama Review", "Kdrama Recap"
+    "reddit stories shorts",
+    "relationship stories shorts",
+    "cheating stories shorts",
+    "aita shorts",
+    "reddit cheating shorts",
+    "open marriage shorts",
+    "surviving infidelity shorts",
+    "true relationship stories shorts",
 ]
 
 # ==========================================
