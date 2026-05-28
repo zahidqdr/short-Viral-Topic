@@ -21,7 +21,7 @@ st.title("🔥 YouTube Viral Topics Tool")
 days = st.number_input("Enter Days (1-30):", 1, 30, 5)
 
 # ✅ SHORTS OPTION ADDED
-only_shorts = st.checkbox("🎬 Show ONLY Shorts (≤ 60 sec)", value=True)
+only_shorts = st.checkbox("🎬 Show ONLY Shorts (≤ 160 sec)", value=True)
 
 keywords = [
     "Korean Drama", "Kdrama Romance", "Best Korean Drama",
@@ -140,7 +140,7 @@ if st.button("🚀 Fetch Data"):
                     duration = vdata["contentDetails"]["duration"]
                     seconds = int(isodate.parse_duration(duration).total_seconds())
 
-                    if only_shorts and seconds > 60:
+                    if only_shorts and seconds > 160:
                         continue
 
                     all_results.append({
